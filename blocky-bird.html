@@ -1,0 +1,1734 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Blocky Bird</title>
+    <!-- Pixelated Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <!-- Audio Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js" defer></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Base styles */
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #3a7bda;
+            color: #FFFFFF;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            touch-action: manipulation; /* Prevent zoom on tap */
+        }
+        
+        canvas {
+            display: block;
+            background-color: #3a7bda;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+        }
+
+        #canvas-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 500px; /* Max width for desktop */
+            max-height: 900px; /* Max height for desktop */
+            overflow: hidden;
+            border: 4px solid #000;
+            box-shadow: 0 0 0 4px #555;
+        }
+        
+        /* Base button style */
+        .btn {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #C6C6C6;
+            color: #222;
+            border: 4px solid #000000;
+            border-top-color: #E0E0E0;
+            border-left-color: #E0E0E0;
+            border-bottom-color: #555555;
+            border-right-color: #555555;
+            padding: 0.75rem 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: inset -4px -4px 0px 0px #888888;
+            image-rendering: pixelated;
+            transform: scale(1);
+            transition: transform 0.05s ease-out;
+            min-width: 250px;
+        }
+
+        .btn:active, .btn-active {
+            border-top-color: #555555;
+            border-left-color: #555555;
+            border-bottom-color: #E0E0E0;
+            border-right-color: #E0E0E0;
+            box-shadow: inset 4px 4px 0px 0px #888888;
+            transform: scale(0.98);
+        }
+        
+        /* Disabled button style */
+        .btn-disabled {
+            background-color: #9E9E9E;
+            color: #555;
+            border-color: #777;
+            border-top-color: #BDBDBD;
+            border-left-color: #BDBDBD;
+            box-shadow: inset -4px -4px 0px 0px #777;
+            cursor: not-allowed;
+        }
+        
+        .btn-disabled:active {
+            transform: scale(1);
+            box-shadow: inset -4px -4px 0px 0px #777;
+        }
+        
+        /* Buyable button style */
+        .btn-buyable {
+            background-color: #A5D6A7; /* Light Green */
+            color: #1B5E20; /* Dark Green */
+            border-top-color: #C8E6C9;
+            border-left-color: #C8E6C9;
+            border-bottom-color: #66BB6A;
+            border-right-color: #66BB6A;
+            box-shadow: inset -4px -4px 0px 0px #81C784;
+        }
+        .btn-buyable:active {
+            box-shadow: inset 4px 4px 0px 0px #81C784;
+            border-top-color: #66BB6A;
+            border-left-color: #66BB6A;
+            border-bottom-color: #C8E6C9;
+            border-right-color: #C8E6C9;
+        }
+
+        /* Menu base styles */
+        .menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        /* Title text */
+        .title-text {
+            font-size: 2.5rem;
+            color: #FFFF00; /* Yellow */
+            text-shadow: 4px 4px 0px #000, 0 0 10px #000;
+            margin-bottom: 2rem;
+            line-height: 1.2;
+            text-align: center;
+        }
+
+        .game-over-text {
+            color: #FF5555; /* Red */
+        }
+        
+        .score-text {
+            font-size: 1.5rem;
+            color: #FFFFFF;
+            text-shadow: 2px 2px 0px #000;
+            margin-bottom: 1rem;
+        }
+        
+        .new-high-score-text {
+            font-size: 1.2rem;
+            color: #FFFF00;
+            text-shadow: 2px 2px 0px #000;
+            margin-bottom: 1rem;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Modal for taunt */
+        #taunt-modal {
+            background: rgba(50, 50, 50, 0.9);
+            border: 4px solid #000;
+            border-top-color: #E0E0E0;
+            border-bottom-color: #555555;
+            border-left-color: #E0E0E0;
+            border-right-color: #555555;
+            box-shadow: inset -4px -4px 0px 0px #888888, 0 0 0 4px #000;
+            width: 90%;
+            max-width: 400px;
+            padding: 1.5rem;
+            box-sizing: border-box;
+        }
+        
+        #taunt-text {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #FFFFFF;
+            text-shadow: 2px 2px 0 #000;
+            min-height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        
+        /* Loading spinner */
+        .spinner {
+            border: 4px solid #555;
+            border-top: 4px solid #FFFF00;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Character Shop */
+        #shop-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            width: 100%;
+            max-width: 360px;
+            margin-bottom: 1rem;
+        }
+        
+        .shop-item {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #9E9E9E;
+            color: #555;
+            border: 4px solid #000000;
+            border-top-color: #BDBDBD;
+            border-left-color: #BDBDBD;
+            border-bottom-color: #777777;
+            border-right-color: #777777;
+            padding: 0.5rem;
+            text-align: center;
+            cursor: not-allowed;
+            box-shadow: inset -2px -2px 0px 0px #777777;
+            position: relative;
+            image-rendering: pixelated;
+        }
+        
+        .shop-item.selected {
+            background-color: #64B5F6; /* Blue */
+            color: #0D47A1;
+            border-top-color: #90CAF9;
+            border-left-color: #90CAF9;
+            border-bottom-color: #42A5F5;
+            border-right-color: #42A5F5;
+            box-shadow: inset 4px 4px 0px 0px #42A5F5;
+            cursor: default;
+        }
+        
+        .shop-item.buyable {
+            background-color: #A5D6A7; /* Green */
+            color: #1B5E20;
+            border-top-color: #C8E6C9;
+            border-left-color: #C8E6C9;
+            border-bottom-color: #66BB6A;
+            border-right-color: #66BB6A;
+            box-shadow: inset -2px -2px 0px 0px #81C784;
+            cursor: pointer;
+        }
+        
+        .shop-item.buyable:active {
+            box-shadow: inset 2px 2px 0px 0px #81C784;
+        }
+
+        .shop-item canvas {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 0.25rem;
+            background: none;
+        }
+        
+        .shop-item-name {
+            font-size: 0.6rem;
+            line-height: 1.1;
+            word-break: break-word;
+        }
+        
+        .shop-item-cost {
+            font-size: 0.7rem;
+            color: #FFFF00;
+            text-shadow: 1px 1px 0 #000;
+        }
+        
+        .coin-icon-small {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: #FFFF00;
+            border: 1px solid #E6A200;
+            border-radius: 50%;
+            margin-right: 2px;
+        }
+        
+        #total-coins {
+            font-size: 1.2rem;
+            color: #FFFF00;
+            text-shadow: 2px 2px 0 #000;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .coin-icon-large {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            background-color: #FFFF00;
+            border: 2px solid #E6A200;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+    </style>
+</head>
+
+<body class="bg-gray-900">
+
+    <div id="game-container">
+        <div id="canvas-wrapper">
+            <canvas id="gameCanvas"></canvas>
+
+            <!-- Main Menu -->
+            <div id="main-menu" class="menu flex">
+                <h1 class="title-text">Blocky Bird</h1>
+                <button id="start-button" class="btn mb-4">Start Game</button>
+                <button id="settings-button" class="btn">Settings</button>
+                <div class="mt-8 score-text" id="main-menu-high-score">High Score: 0</div>
+            </div>
+
+            <!-- Game Over Menu -->
+            <div id="game-over-menu" class="menu hidden">
+                <h1 class="title-text game-over-text">Game Over</h1>
+                <div class="score-text" id="game-over-score">Score: 0</div>
+                <div class="score-text" id="game-over-coins">Coins: 0</div>
+                <div class="new-high-score-text hidden" id="new-high-score">New High Score!</div>
+                
+                <button id="restart-button" class="btn mb-4">Restart</button>
+                <button id="main-menu-button" class="btn mb-4">Main Menu</button>
+                <button id="taunt-button" class="btn text-sm">✨ Get Taunt</button>
+                
+                <!-- Taunt Modal -->
+                <div id="taunt-modal" class="menu hidden">
+                    <div id="taunt-text" class="mb-4">
+                        <div class="spinner"></div>
+                    </div>
+                    <button id="close-taunt-button" class="btn">Close</button>
+                </div>
+            </div>
+            
+            <!-- Settings Menu -->
+            <div id="settings-menu" class="menu hidden">
+                <h1 class="title-text text-2xl mb-6">Settings</h1>
+                <button id="flap-strength-toggle" class="btn mb-4">Flap Strength: Normal</button>
+                <button id="theme-toggle" class="btn mb-4">Theme: Overworld</button>
+                <button id="shop-button" class="btn mb-4">Shop / Characters</button>
+                <button id="settings-back-button" class="btn">Back</button>
+            </div>
+            
+            <!-- Character Shop Menu -->
+            <div id="shop-menu" class="menu hidden">
+                <h1 class="title-text text-2xl mb-4">Shop</h1>
+                <div id="total-coins"><span class="coin-icon-large"></span> 0</div>
+                <div id="shop-grid">
+                    <!-- Character items will be injected here by JS -->
+                </div>
+                <button id="shop-back-button" class="btn">Back</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Game Script -->
+    <script>
+        // Wrap entire game in a 'load' event listener to ensure Tone.js is ready
+        window.addEventListener('load', () => {
+            
+            // --- Polyfills ---
+            // requestAnimationFrame polyfill
+            window.requestAnimationFrame = window.requestAnimationFrame ||
+                window.mozRequestAnimationFrame ||
+                window.webkitRequestAnimationFrame ||
+                window.msRequestAnimationFrame ||
+                function(callback) {
+                    return window.setTimeout(callback, 1000 / 60);
+                };
+
+            // --- Game Setup ---
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Get the wrapper element
+            const canvasWrapper = document.getElementById('canvas-wrapper');
+
+            // Game state
+            let state = 'main-menu'; // main-menu, playing, game-over
+            let frame = 0;
+            let score = 0;
+            let coins = 0;
+            let currentLevel = 1;
+            let gameSpeed = 3;
+            let pipeGap = 150;
+            
+            // Game settings
+            let settings = {
+                highScore: 0,
+                totalCoins: 0,
+                theme: 'overworld',
+                flapStrength: 3.5, // Default 'Normal'
+                flapStrengthName: 'Normal',
+                selectedCharacter: 'Steve',
+                unlockedCharacters: ['Steve']
+            };
+
+            // Constants
+            const gravity = 0.2;
+            const groundHeight = 80;
+            const playerSize = 24; // Smaller player size
+            const coinSize = 15;
+
+            // --- DOM Elements ---
+            const mainMenu = document.getElementById('main-menu');
+            const gameOverMenu = document.getElementById('game-over-menu');
+            const settingsMenu = document.getElementById('settings-menu');
+            const shopMenu = document.getElementById('shop-menu');
+            
+            const startButton = document.getElementById('start-button');
+            const settingsButton = document.getElementById('settings-button');
+            const restartButton = document.getElementById('restart-button');
+            const mainMenuButton = document.getElementById('main-menu-button');
+            
+            const gameOverScore = document.getElementById('game-over-score');
+            const gameOverCoins = document.getElementById('game-over-coins');
+            const newHighScoreText = document.getElementById('new-high-score');
+            const mainMenuHighScore = document.getElementById('main-menu-high-score');
+            
+            const tauntButton = document.getElementById('taunt-button');
+            const tauntModal = document.getElementById('taunt-modal');
+            const tauntText = document.getElementById('taunt-text');
+            const closeTauntButton = document.getElementById('close-taunt-button');
+            
+            const flapStrengthToggle = document.getElementById('flap-strength-toggle');
+            const themeToggle = document.getElementById('theme-toggle');
+            const shopButton = document.getElementById('shop-button');
+            const settingsBackButton = document.getElementById('settings-back-button');
+            
+            const shopGrid = document.getElementById('shop-grid');
+            const shopBackButton = document.getElementById('shop-back-button');
+            const totalCoinsDisplay = document.getElementById('total-coins');
+
+            // --- Canvas Resizing ---
+            function resizeCanvas() {
+                const { width, height } = canvasWrapper.getBoundingClientRect();
+                
+                // Set canvas virtual resolution
+                canvas.width = 360; 
+                canvas.height = 640;
+                
+                // Style canvas to fit wrapper (maintains aspect ratio)
+                let ratio = canvas.width / canvas.height;
+                let newWidth, newHeight;
+
+                if (width / height > ratio) {
+                    newHeight = height;
+                    newWidth = newHeight * ratio;
+                } else {
+                    newWidth = width;
+                    newHeight = newWidth / ratio;
+                }
+                
+                canvas.style.width = `${newWidth}px`;
+                canvas.style.height = `${newHeight}px`;
+
+                // Re-init background on resize
+                if (state !== 'playing') {
+                    backgroundManager.init(settings.theme);
+                    drawMainMenu();
+                }
+            }
+            
+            // --- Game Data ---
+            
+            // --- Theme Colors ---
+            const themes = {
+                overworld: { sky: '#3a7bda', ground: '#8B4513', grass: '#228B22', pipe: '#8B4513', pipeTop: '#228B22' },
+                nether: { sky: '#5c0000', ground: '#4a0101', grass: '#3b0000', pipe: '#4a0101', pipeTop: '#3b0000' },
+                new_york: { sky: '#2C3E50', ground: '#7f7f7f', grass: '#95a5a6', pipe: '#6E6E6E', pipeTop: '#BDBDBD' },
+                los_angeles: { sky: '#f0e68c', ground: '#D2B48C', grass: '#BDC3C7', pipe: '#3498DB', pipeTop: '#5DADE2' },
+                desert: { sky: '#FAD7A0', ground: '#D2B48C', grass: '#E5C100', pipe: '#E5C100', pipeTop: '#F0E68C' },
+                the_end: { sky: '#1A001A', ground: '#F0E68C', grass: '#E0D8B0', pipe: '#2E2E2E', pipeTop: '#4C4C4C' },
+                mushroom: { sky: '#D7BDE2', ground: '#6E5C6E', grass: '#8A768A', pipe: '#FADBD8', pipeTop: '#E74C3C' },
+                coral_reef: { sky: '#5DADE2', ground: '#FAD7A0', grass: '#FDEBCD', pipe: '#76D7C4', pipeTop: '#1ABC9C' },
+                cherry_blossom: { sky: '#FFC0CB', ground: '#5C3317', grass: '#8B4513', pipe: '#A0522D', pipeTop: '#8B4513' },
+                volcano: { sky: '#4A0404', ground: '#1A1A1A', grass: '#333333', pipe: '#2E2E2E', pipeTop: '#FF4500' },
+                snowy_forest: { sky: '#F0F8FF', ground: '#FFFFFF', grass: '#F5F5F5', pipe: '#654321', pipeTop: '#FFFFFF' },
+                space_station: { sky: '#00001A', ground: '#6C7A89', grass: '#95A5A6', pipe: '#BDC3C7', pipeTop: '#6C7A89' },
+                classic_8bit: { sky: '#5C94FC', ground: '#E08010', grass: '#E08010', pipe: '#008000', pipeTop: '#00A000' }
+            };
+            let colors = themes.overworld;
+            
+            
+            // --- Character Drawing Functions ---
+            const drawPlayerBody = (ctx, x, y, skin, shirt, pants) => {
+                const w = playerSize;
+                const h = playerSize;
+                const headSize = w * 0.5;
+                const bodyH = h * 0.6;
+                const bodyW = w * 0.5;
+                const limbW = w * 0.25;
+                const limbH = h * 0.6;
+
+                // Arm swing
+                const swing = Math.sin(frame * 0.3) * 0.4; // Radians
+                
+                // Legs
+                const legSwing = Math.sin(frame * 0.3 + Math.PI) * 10;
+                ctx.fillStyle = pants;
+                // Leg 1 (back)
+                ctx.fillRect(x - bodyW * 0.5 + limbW * 0.5, y + bodyH * 0.5 - limbW * 0.5, limbW, limbH + legSwing * 0.5);
+                // Leg 2 (front)
+                ctx.fillRect(x - limbW * 0.5, y + bodyH * 0.5 - limbW * 0.5, limbW, limbH - legSwing * 0.5);
+
+                // Body
+                ctx.fillStyle = shirt;
+                ctx.fillRect(x - bodyW / 2, y - bodyH / 2, bodyW, bodyH);
+
+                // Arms (swinging)
+                ctx.save();
+                ctx.fillStyle = shirt;
+                // Back Arm
+                ctx.translate(x - bodyW / 2, y - bodyH / 2 + limbW / 2);
+                ctx.rotate(-swing);
+                ctx.fillRect(0, -limbW / 2, limbH, limbW);
+                ctx.restore();
+                
+                ctx.save();
+                ctx.fillStyle = skin;
+                // Back Hand
+                ctx.translate(x - bodyW / 2 + limbH, y - bodyH / 2 + limbW / 2);
+                ctx.rotate(-swing);
+                ctx.fillRect(0, -limbW / 2, limbW, limbW);
+                ctx.restore();
+
+                // Front Arm
+                ctx.save();
+                ctx.fillStyle = shirt;
+                ctx.translate(x + bodyW / 2, y - bodyH / 2 + limbW / 2);
+                ctx.rotate(swing);
+                ctx.fillRect(-limbH, -limbW / 2, limbH, limbW);
+                ctx.restore();
+                
+                ctx.save();
+                ctx.fillStyle = skin;
+                // Front Hand
+                ctx.translate(x + bodyW / 2 - limbH, y - bodyH / 2 + limbW / 2);
+                ctx.rotate(swing);
+                ctx.fillRect(0, -limbW / 2, limbW, limbW);
+                ctx.restore();
+
+                // Head
+                ctx.fillStyle = skin;
+                ctx.fillRect(x - headSize / 2, y - bodyH / 2 - headSize * 0.9, headSize, headSize);
+            };
+
+            const drawSteve = (ctx, x, y) => {
+                drawPlayerBody(ctx, x, y, '#E0A070', '#5B85A8', '#4A4A9A');
+                // Hair
+                ctx.fillStyle = '#402818';
+                ctx.fillRect(x - (playerSize*0.5)/2, y - (playerSize*0.6)/2 - (playerSize*0.5)*0.9, playerSize*0.5, playerSize*0.5 / 2);
+                // Eyes
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(x - playerSize*0.1 - 2, y - (playerSize*0.6)/2 - (playerSize*0.5)*0.5, 2, 2);
+                ctx.fillRect(x + playerSize*0.1, y - (playerSize*0.6)/2 - (playerSize*0.5)*0.5, 2, 2);
+                ctx.fillStyle = '#4A4A9A';
+                ctx.fillRect(x - playerSize*0.1 - 1, y - (playerSize*0.6)/2 - (playerSize*0.5)*0.5, 1, 2);
+                ctx.fillRect(x + playerSize*0.1 + 1, y - (playerSize*0.6)/2 - (playerSize*0.5)*0.5, 1, 2);
+            };
+
+            const drawZombie = (ctx, x, y) => {
+                drawPlayerBody(ctx, x, y, '#617D4E', '#5B85A8', '#4A4A9A');
+                // Eyes
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(x - playerSize*0.1 - 2, y - (playerSize*0.6)/2 - (playerSize*0.5)*0.5, 4, 2);
+                ctx.fillRect(x + playerSize*0.1, y - (playerSize*0.6)/2 - (playerSize*0.5)*0.5, 4, 2);
+            };
+            
+            const drawCreeper = (ctx, x, y) => {
+                drawPlayerBody(ctx, x, y, '#2E933A', '#2E933A', '#2E933A');
+                // Face
+                ctx.fillStyle = '#000000';
+                const headY = y - (playerSize*0.6)/2 - (playerSize*0.5)*0.9;
+                ctx.fillRect(x - playerSize*0.1 - 3, headY + playerSize*0.1, 4, 4);
+                ctx.fillRect(x + playerSize*0.1 - 1, headY + playerSize*0.1, 4, 4);
+                ctx.fillRect(x - 2, headY + playerSize*0.25, 4, 6);
+                ctx.fillRect(x - 4, headY + playerSize*0.3, 2, 4);
+                ctx.fillRect(x + 2, headY + playerSize*0.3, 2, 4);
+            };
+
+            const drawEnderman = (ctx, x, y) => {
+                drawPlayerBody(ctx, x, y, '#1A1A1A', '#1A1A1A', '#1A1A1A');
+                // Eyes
+                ctx.fillStyle = '#D455F5';
+                ctx.fillRect(x - playerSize*0.1 - 3, y - (playerSize*0.6)/2 - (playerSize*0.5)*0.5, 4, 2);
+                ctx.fillRect(x + playerSize*0.1 - 1, y - (playerSize*0.6)/2 - (playerSize*0.5)*0.5, 4, 2);
+            };
+            
+            const drawSkeleton = (ctx, x, y) => {
+                drawPlayerBody(ctx, x, y, '#C1C1C1', '#C1C1C1', '#C1C1C1');
+                // Face
+                ctx.fillStyle = '#000000';
+                const headY = y - (playerSize*0.6)/2 - (playerSize*0.5)*0.9;
+                ctx.fillRect(x - playerSize*0.1 - 3, headY + playerSize*0.1, 4, 4);
+                ctx.fillRect(x + playerSize*0.1 - 1, headY + playerSize*0.1, 4, 4);
+                ctx.fillRect(x - 2, headY + playerSize*0.3, 4, 2);
+            };
+            
+            const drawWitch = (ctx, x, y) => {
+                drawPlayerBody(ctx, x, y, '#D5C3A3', '#5E346E', '#3E244A');
+                // Face
+                const headY = y - (playerSize*0.6)/2 - (playerSize*0.5)*0.9;
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(x - playerSize*0.1 - 2, headY + playerSize*0.2, 2, 2);
+                ctx.fillRect(x + playerSize*0.1, headY + playerSize*0.2, 2, 2);
+                // Wart
+                ctx.fillStyle = '#7A6B4E';
+                ctx.fillRect(x - 1, headY + playerSize*0.3, 2, 2);
+                // Hat
+                ctx.fillStyle = '#3E244A';
+                ctx.fillRect(x - playerSize*0.3, headY, playerSize*0.6, 4);
+                ctx.fillRect(x - playerSize*0.2, headY - playerSize*0.4, playerSize*0.4, playerSize*0.4);
+            };
+            
+            const drawPiglin = (ctx, x, y) => {
+                drawPlayerBody(ctx, x, y, '#F7C6A4', '#A87938', '#5E432A');
+                // Face
+                const headY = y - (playerSize*0.6)/2 - (playerSize*0.5)*0.9;
+                // Eyes
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(x - playerSize*0.1 - 3, headY + playerSize*0.2, 3, 2);
+                ctx.fillRect(x + playerSize*0.1, headY + playerSize*0.2, 3, 2);
+                // Snout
+                ctx.fillStyle = '#D4A381';
+                ctx.fillRect(x - 3, headY + playerSize*0.3, 6, 3);
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(x - 2, headY + playerSize*0.4, 1, 1);
+                ctx.fillRect(x + 1, headY + playerSize*0.4, 1, 1);
+            };
+            
+            const drawArthur = (ctx, x, y) => {
+                drawPlayerBody(ctx, x, y, '#E0A070', '#3E546A', '#6A4A3A');
+                // Hat
+                ctx.fillStyle = '#3A2E28';
+                ctx.fillRect(x - playerSize*0.3, y - (playerSize*0.6)/2 - (playerSize*0.5)*0.9, playerSize*0.6, 4);
+                ctx.fillRect(x - playerSize*0.2, y - (playerSize*0.6)/2 - (playerSize*0.5)*1.1, playerSize*0.4, 4);
+            };
+            
+            const drawDoomguy = (ctx, x, y) => {
+                drawPlayerBody(ctx, x, y, '#E0A070', '#007A33', '#5D4037');
+                // Helmet
+                ctx.fillStyle = '#005A22';
+                ctx.fillRect(x - playerSize*0.25, y - (playerSize*0.6)/2 - (playerSize*0.5)*1.1, playerSize*0.5, playerSize*0.6);
+                // Visor
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(x - playerSize*0.2, y - (playerSize*0.6)/2 - (playerSize*0.5)*0.8, playerSize*0.4, 3);
+            };
+            
+            const drawSamus = (ctx, x, y) => {
+                drawPlayerBody(ctx, x, y, '#E0A070', '#D94A00', '#B52800');
+                // Helmet
+                ctx.fillStyle = '#D94A00';
+                ctx.fillRect(x - playerSize*0.3, y - (playerSize*0.6)/2 - (playerSize*0.5)*1.1, playerSize*0.6, playerSize*0.7);
+                // Visor
+                ctx.fillStyle = '#00F000';
+                ctx.fillRect(x - playerSize*0.2, y - (playerSize*0.6)/2 - (playerSize*0.5)*0.8, playerSize*0.4, 3);
+            };
+            
+            const drawRyu = (ctx, x, y) => {
+                drawPlayerBody(ctx, x, y, '#E0A070', '#E0E0E0', '#E0E0E0');
+                // Hair
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(x - playerSize*0.25, y - (playerSize*0.6)/2 - (playerSize*0.5)*0.9, playerSize*0.5, playerSize*0.3);
+                // Headband
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(x - playerSize*0.25, y - (playerSize*0.6)/2 - (playerSize*0.5)*0.7, playerSize*0.5, 3);
+            };
+            
+            const drawAkuma = (ctx, x, y) => {
+                drawPlayerBody(ctx, x, y, '#C09060', '#3E3E3E', '#3E3E3E');
+                // Hair
+                ctx.fillStyle = '#FF4040';
+                ctx.fillRect(x - playerSize*0.3, y - (playerSize*0.6)/2 - (playerSize*0.5)*1.2, playerSize*0.6, playerSize*0.6);
+                // Eyes
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(x - playerSize*0.1 - 3, y - (playerSize*0.6)/2 - (playerSize*0.5)*0.5, 4, 2);
+                ctx.fillRect(x + playerSize*0.1 - 1, y - (playerSize*0.6)/2 - (playerSize*0.5)*0.5, 4, 2);
+            };
+            
+            const drawSnake = (ctx, x, y) => {
+                drawPlayerBody(ctx, x, y, '#E0A070', '#4A4A4A', '#5A5A5A');
+                // Hair
+                ctx.fillStyle = '#402818';
+                ctx.fillRect(x - playerSize*0.25, y - (playerSize*0.6)/2 - (playerSize*0.5)*0.9, playerSize*0.5, playerSize*0.3);
+                // Bandana
+                ctx.fillStyle = '#3E3E3E';
+                ctx.fillRect(x - playerSize*0.25, y - (playerSize*0.6)/2 - (playerSize*0.5)*0.7, playerSize*0.5, 3);
+            };
+            
+            const drawCloud = (ctx, x, y) => {
+                drawPlayerBody(ctx, x, y, '#E0A070', '#2E2A4A', '#3E3A5A');
+                // Hair (Spiky)
+                ctx.fillStyle = '#FFFF80';
+                ctx.beginPath();
+                const headY = y - (playerSize*0.6)/2 - (playerSize*0.5)*0.9;
+                ctx.moveTo(x - playerSize*0.3, headY);
+                ctx.lineTo(x, headY - playerSize*0.5);
+                ctx.lineTo(x + playerSize*0.3, headY);
+                ctx.lineTo(x + playerSize*0.2, headY - playerSize*0.3);
+                ctx.lineTo(x + playerSize*0.4, headY - playerSize*0.2);
+                ctx.lineTo(x - playerSize*0.1, headY - playerSize*0.4);
+                ctx.closePath();
+                ctx.fill();
+            };
+
+            // --- Audio ---
+            // MOVED AUDIO DEFINITIONS *BEFORE* 'characters' OBJECT TO FIX ReferenceError
+            let audioReady = false;
+            let charSounds = {};
+            const masterOut = new Tone.Volume(-10).toDestination();
+
+            // Create all sounds immediately
+            try {
+                charSounds.flap = new Tone.MembraneSynth({
+                    pitchDecay: 0.01, octaves: 4, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 },
+                }).connect(masterOut);
+                
+                charSounds.hiss = new Tone.NoiseSynth({
+                    noise: { type: 'white' }, envelope: { attack: 0.01, decay: 0.05, sustain: 0, release: 0.1 },
+                }).connect(masterOut);
+                
+                charSounds.vwoop = new Tone.FMSynth({
+                    harmonicity: 1.5, modulationIndex: 5,
+                    envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.2 },
+                    modulationEnvelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }
+                }).connect(masterOut);
+
+                charSounds.blip = new Tone.Synth({
+                    oscillator: { type: 'triangle' },
+                    envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.1 }
+                }).connect(masterOut);
+
+                charSounds.grunt = new Tone.MembraneSynth({
+                    pitchDecay: 0.1, octaves: 2, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }
+                }).connect(masterOut);
+                
+                charSounds.cowboy = new Tone.Synth({
+                    oscillator: { type: 'sawtooth' },
+                    envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
+                }).connect(masterOut);
+                
+                charSounds.doom = new Tone.MetalSynth({
+                    frequency: 100, envelope: { attack: 0.001, decay: 0.1, release: 0.05 },
+                    harmonicity: 3.1, modulationIndex: 16, resonance: 2000, octaves: 1.5
+                }).connect(masterOut);
+                
+                charSounds.samus = new Tone.FMSynth({
+                    harmonicity: 0.5, modulationIndex: 1.2,
+                    envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 },
+                }).connect(masterOut);
+                
+                charSounds.hadouken = new Tone.NoiseSynth({
+                    noise: { type: 'pink' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 },
+                }).connect(masterOut);
+                
+                charSounds.akuma = new Tone.MembraneSynth({
+                    pitchDecay: 0.05, octaves: 6, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }
+                }).connect(masterOut);
+                
+                charSounds.snake = new Tone.NoiseSynth({
+                    noise: { type: 'brown' }, envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.05 },
+                }).connect(masterOut);
+                
+                charSounds.cloud = new Tone.PluckSynth({
+                    attackNoise: 0.5, damping: 2000, resonance: 0.7,
+                }).connect(masterOut);
+
+                charSounds.coin = new Tone.Synth({
+                    oscillator: { type: 'square' },
+                    envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 },
+                }).connect(masterOut);
+                
+                charSounds.die = new Tone.MembraneSynth({
+                    pitchDecay: 0.1, octaves: 10, envelope: { attack: 0.01, decay: 0.5, sustain: 0, release: 0.5 }
+                }).connect(masterOut);
+
+            } catch (e) {
+                console.error("Failed to create audio synths:", e);
+            }
+            
+            // --- Character Definitions ---
+            const characters = {
+                'Steve': { name: 'Steve', sound: charSounds.flap, cost: 0, unlocked: true, draw: drawSteve },
+                'Zombie': { name: 'Zombie', sound: charSounds.flap, cost: 50, unlocked: false, draw: drawZombie },
+                'Creeper': { name: 'Creeper', sound: charSounds.hiss, cost: 100, unlocked: false, draw: drawCreeper },
+                'Enderman': { name: 'Enderman', sound: charSounds.vwoop, cost: 150, unlocked: false, draw: drawEnderman },
+                'Skeleton': { name: 'Skeleton', sound: charSounds.flap, cost: 200, unlocked: false, draw: drawSkeleton },
+                'Witch': { name: 'Witch', sound: charSounds.blip, cost: 250, unlocked: false, draw: drawWitch },
+                'Piglin': { name: 'Piglin', sound: charSounds.grunt, cost: 300, unlocked: false, draw: drawPiglin },
+                'Arthur': { name: 'Arthur', sound: charSounds.cowboy, cost: 350, unlocked: false, draw: drawArthur },
+                'Doomguy': { name: 'Doomguy', sound: charSounds.doom, cost: 400, unlocked: false, draw: drawDoomguy },
+                'Samus': { name: 'Samus', sound: charSounds.samus, cost: 450, unlocked: false, draw: drawSamus },
+                'Ryu': { name: 'Ryu', sound: charSounds.hadouken, cost: 500, unlocked: false, draw: drawRyu },
+                'Akuma': { name: 'Akuma', sound: charSounds.akuma, cost: 550, unlocked: false, draw: drawAkuma },
+                'Snake': { name: 'Snake', sound: charSounds.snake, cost: 600, unlocked: false, draw: drawSnake },
+                'Cloud': { name: 'Cloud', sound: charSounds.cloud, cost: 700, unlocked: false, draw: drawCloud },
+            };
+
+
+            // --- Audio Functions ---
+            async function initAudio() {
+                if (audioReady) return true;
+                try {
+                    await Tone.start();
+                    audioReady = true;
+                    console.log("Audio ready!");
+                    return true;
+                } catch (e) {
+                    console.error("Audio failed to start:", e);
+                    return false;
+                }
+            }
+
+            function playFlapSound() {
+                if (!audioReady) return;
+                try {
+                    const char = characters[settings.selectedCharacter];
+                    if (char && char.sound && typeof char.sound.triggerAttackRelease === 'function') {
+                        let note = 'C4';
+                        let duration = '8n';
+                        if (char.sound === charSounds.hiss || char.sound === charSounds.snake || char.sound === charSounds.hadouken) {
+                            char.sound.triggerAttackRelease(duration, Tone.now());
+                        } else if (char.sound === charSounds.doom) {
+                            char.sound.triggerAttackRelease('C2', duration, Tone.now());
+                        } else if (char.sound === charSounds.cloud) {
+                            char.sound.triggerAttackRelease('G4', duration, Tone.now());
+                        } else if (char.sound === charSounds.blip) {
+                            char.sound.triggerAttackRelease('G5', duration, Tone.now());
+                        } else if (char.sound === charSounds.cowboy) {
+                            char.sound.triggerAttackRelease('E3', duration, Tone.now());
+                        } else if (char.sound === charSounds.akuma) {
+                            char.sound.triggerAttackRelease('C3', duration, Tone.now());
+                        } else {
+                            char.sound.triggerAttackRelease(note, duration, Tone.now());
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error playing flap sound:", e);
+                }
+            }
+
+            function playCoinSound() {
+                if (!audioReady) return;
+                try {
+                    if (charSounds.coin && typeof charSounds.coin.triggerAttackRelease === 'function') {
+                        charSounds.coin.triggerAttackRelease('E6', '16n', Tone.now());
+                    }
+                } catch (e) {
+                    console.error("Error playing coin sound:", e);
+                }
+            }
+
+            function playDieSound() {
+                if (!audioReady) return;
+                try {
+                    if (charSounds.die && typeof charSounds.die.triggerAttackRelease === 'function') {
+                        charSounds.die.triggerAttackRelease('C2', '4n', Tone.now());
+                    }
+                } catch (e) {
+                    console.error("Error playing die sound:", e);
+                }
+            }
+
+            // --- Save/Load Game ---
+            function saveGame() {
+                try {
+                    // Update settings.unlockedCharacters from the characters object
+                    settings.unlockedCharacters = Object.keys(characters).filter(key => characters[key].unlocked);
+                    localStorage.setItem('blockyBirdSettings', JSON.stringify(settings));
+                } catch (e) {
+                    console.error("Failed to save game:", e);
+                }
+            }
+
+            function loadGame() {
+                try {
+                    const savedSettings = localStorage.getItem('blockyBirdSettings');
+                    if (savedSettings) {
+                        const loaded = JSON.parse(savedSettings);
+                        
+                        // Merge loaded settings carefully
+                        settings.highScore = loaded.highScore || 0;
+                        settings.totalCoins = loaded.totalCoins || 0;
+                        settings.theme = loaded.theme || 'overworld';
+                        settings.selectedCharacter = loaded.selectedCharacter || 'Steve';
+                        
+                        // Handle flap strength mapping
+                        if (loaded.flapStrengthName === 'Weak') {
+                            setFlapStrength('Weak');
+                        } else if (loaded.flapStrengthName === 'Strong') {
+                            setFlapStrength('Strong');
+                        } else {
+                            setFlapStrength('Normal');
+                        }
+
+                        // Restore unlocked characters
+                        if (loaded.unlockedCharacters && Array.isArray(loaded.unlockedCharacters)) {
+                            loaded.unlockedCharacters.forEach(charName => {
+                                if (characters[charName]) {
+                                    characters[charName].unlocked = true;
+                                }
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to load game:", e);
+                }
+                
+                // Always ensure Steve is unlocked
+                characters['Steve'].unlocked = true;
+                
+                // Update UI
+                mainMenuHighScore.textContent = `High Score: ${settings.highScore}`;
+                updateSettingsUI();
+            }
+            
+            function updateSettingsUI() {
+                flapStrengthToggle.textContent = `Flap Strength: ${settings.flapStrengthName}`;
+                
+                const themeName = settings.theme.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                themeToggle.textContent = `Theme: ${themeName}`;
+
+                colors = themes[settings.theme] || themes.overworld;
+                document.body.style.backgroundColor = colors.sky;
+                canvas.style.backgroundColor = colors.sky;
+                document.getElementById('game-container').style.backgroundColor = colors.sky;
+                
+                // Update shop UI
+                updateShopUI();
+            }
+            
+            function updateShopUI() {
+                shopGrid.innerHTML = ''; // Clear existing grid
+                totalCoinsDisplay.innerHTML = `<span class="coin-icon-large"></span> ${settings.totalCoins}`;
+                
+                for (const charName in characters) {
+                    const char = characters[charName];
+                    const item = document.createElement('button');
+                    item.className = 'shop-item';
+                    
+                    // Create a small canvas for the preview
+                    const previewCanvas = document.createElement('canvas');
+                    previewCanvas.width = 48;
+                    previewCanvas.height = 48;
+                    const pCtx = previewCanvas.getContext('2d');
+                    pCtx.imageSmoothingEnabled = false; // Ensure pixelation
+                    
+                    // Draw character centered
+                    pCtx.save();
+                    pCtx.translate(24, 24); // Center of small canvas
+                    pCtx.scale(0.8, 0.8); // Scale down a bit
+                    char.draw(pCtx, 0, 0);
+                    pCtx.restore();
+                    
+                    item.appendChild(previewCanvas);
+                    
+                    const nameEl = document.createElement('div');
+                    nameEl.className = 'shop-item-name';
+                    nameEl.textContent = char.name;
+                    item.appendChild(nameEl);
+                    
+                    if (char.unlocked) {
+                        if (settings.selectedCharacter === charName) {
+                            item.classList.add('selected');
+                            item.disabled = true;
+                        } else {
+                            item.classList.add('buyable'); // Use buyable style for "selectable"
+                            item.disabled = false;
+                            item.onclick = () => selectCharacter(charName);
+                        }
+                    } else {
+                        // Not unlocked, show price
+                        const costEl = document.createElement('div');
+                        costEl.className = 'shop-item-cost';
+                        costEl.innerHTML = `<span class="coin-icon-small"></span>${char.cost}`;
+                        item.appendChild(costEl);
+                        
+                        if (settings.totalCoins >= char.cost) {
+                            item.classList.add('buyable');
+                            item.disabled = false;
+                            item.onclick = () => buyCharacter(charName);
+                        } else {
+                            item.disabled = true;
+                        }
+                    }
+                    
+                    shopGrid.appendChild(item);
+                }
+            }
+            
+            function selectCharacter(charName) {
+                settings.selectedCharacter = charName;
+                saveGame();
+                updateShopUI();
+            }
+            
+            function buyCharacter(charName) {
+                const char = characters[charName];
+                if (settings.totalCoins >= char.cost) {
+                    settings.totalCoins -= char.cost;
+                    char.unlocked = true;
+                    settings.selectedCharacter = charName; // Auto-select on buy
+                    saveGame();
+                    updateShopUI();
+                }
+            }
+
+
+            // --- Game Objects ---
+            const player = {
+                x: 60,
+                y: 150,
+                w: playerSize,
+                h: playerSize,
+                velY: 0,
+                drawFn: drawSteve, // Default
+                
+                init() {
+                    this.y = 150;
+                    this.velY = 0;
+                    this.drawFn = characters[settings.selectedCharacter].draw || drawSteve;
+                },
+                
+                update() {
+                    this.velY += gravity;
+                    this.y += this.velY;
+
+                    // Flap animation (swinging arms) is handled by 'frame' in draw functions
+                    
+                    // Ground collision
+                    if (this.y + this.h / 2 > canvas.height - groundHeight) {
+                        this.y = canvas.height - groundHeight - this.h / 2;
+                        this.velY = 0;
+                        endGame();
+                    }
+                    
+                    // Ceiling collision
+                    if (this.y - this.h / 2 < 0) {
+                        this.y = this.h / 2;
+                        this.velY = 0;
+                    }
+                },
+                
+                draw(ctx) {
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    
+                    // Simple tilt based on velocity
+                    let tilt = Math.max(-Math.PI / 6, Math.min(Math.PI / 4, this.velY * 0.05));
+                    ctx.rotate(tilt);
+                    
+                    // Draw the selected character
+                    this.drawFn(ctx, 0, 0);
+                    
+                    ctx.restore();
+                },
+                
+                flap() {
+                    this.velY = -settings.flapStrength;
+                    playFlapSound();
+                }
+            };
+
+            const pipes = {
+                list: [],
+                w: 50,
+                
+                init() {
+                    this.list = [];
+                    // Initial pipes
+                    for (let i = 1; i <= 3; i++) {
+                        this.spawn(canvas.width + i * (canvas.width / 2.5));
+                    }
+                },
+                
+                spawn(x) {
+                    const minH = 100;
+                    const maxH = canvas.height - groundHeight - pipeGap - minH;
+                    const h = Math.random() * (maxH - minH) + minH;
+                    
+                    this.list.push({
+                        x: x,
+                        y: h, // y pos of the bottom of the top pipe
+                        passed: false,
+                        coin: true, // Pipe has a coin
+                        coinY: h + pipeGap / 2 // Coin is in middle of gap
+                    });
+                },
+                
+                update() {
+                    for (let i = this.list.length - 1; i >= 0; i--) {
+                        let p = this.list[i];
+                        p.x -= gameSpeed;
+
+                        // Remove if off-screen
+                        if (p.x + this.w < 0) {
+                            this.list.splice(i, 1);
+                            this.spawn(this.list[this.list.length - 1].x + (canvas.width / 2.5));
+                            continue;
+                        }
+                        
+                        // Check for collision
+                        if (player.x + player.w / 2 > p.x && player.x - player.w / 2 < p.x + this.w) {
+                            // Check vertical collision
+                            if (player.y - player.h / 2 < p.y || player.y + player.h / 2 > p.y + pipeGap) {
+                                endGame();
+                            }
+                        }
+
+                        // Check for score
+                        if (!p.passed && player.x > p.x + this.w) {
+                            p.passed = true;
+                            score++;
+                            updateDifficulty();
+                        }
+                        
+                        // Check for coin collision
+                        if (p.coin) {
+                            const coinX = p.x + this.w / 2;
+                            if (Math.abs(player.x - coinX) < (player.w / 2 + coinSize / 2) &&
+                                Math.abs(player.y - p.coinY) < (player.h / 2 + coinSize / 2))
+                            {
+                                p.coin = false;
+                                coins++;
+                                playCoinSound();
+                            }
+                        }
+                    }
+                },
+                
+                draw(ctx) {
+                    for (let p of this.list) {
+                        // Draw Coin
+                        if (p.coin) {
+                            const coinX = p.x + this.w / 2;
+                            const coinY = p.coinY;
+                            
+                            ctx.fillStyle = '#FFFF00'; // Yellow
+                            ctx.strokeStyle = '#E6A200'; // Darker outline
+                            ctx.lineWidth = 2;
+                            
+                            ctx.beginPath();
+                            ctx.arc(coinX, coinY, coinSize / 2, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.stroke();
+                            
+                            // Simple shine
+                            ctx.fillStyle = '#FFFF99';
+                            ctx.beginPath();
+                            ctx.arc(coinX - coinSize * 0.1, coinY - coinSize * 0.1, coinSize * 0.2, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    
+                        // Top pipe
+                        ctx.fillStyle = colors.pipeTop;
+                        ctx.fillRect(p.x, 0, this.w, p.y - 10);
+                        ctx.fillStyle = colors.pipe;
+                        ctx.fillRect(p.x - 5, p.y - 10, this.w + 10, 10);
+
+                        // Bottom pipe
+                        let bottomPipeY = p.y + pipeGap;
+                        let bottomPipeH = canvas.height - groundHeight - bottomPipeY;
+                        ctx.fillStyle = colors.pipeTop;
+                        ctx.fillRect(p.x, bottomPipeY, this.w, bottomPipeH);
+                        ctx.fillStyle = colors.pipe;
+                        ctx.fillRect(p.x - 5, bottomPipeY, this.w + 10, 10);
+                    }
+                }
+            };
+            
+            // --- Background Manager (FIXED) ---
+            // Helper functions for drawing background layers
+            const drawHills = function(ctx, color, y, curvature) {
+                ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(-100, y + Math.sin(this.offset * 0.1) * 10);
+                for (let x = 0; x < canvas.width + 200; x += 50) {
+                    ctx.quadraticCurveTo(x + 25 + Math.sin((x + this.offset) * 0.01) * 10, y - (Math.sin((x + this.offset) * 0.005) * curvature), x + 50, y + Math.sin((x + 50 + this.offset) * 0.01) * 10);
+                }
+                ctx.lineTo(canvas.width + 100, canvas.height); ctx.lineTo(-100, canvas.height); ctx.closePath(); ctx.fill();
+            };
+            const drawClouds = function(ctx, color) {
+                ctx.fillStyle = color;
+                for (let i = 0; i < 5; i++) {
+                    let x = (this.offset + i * (canvas.width / 4)) % (canvas.width + 200) - 200; let y = 50 + (i % 2) * 30 + Math.sin(i) * 10;
+                    ctx.beginPath(); ctx.ellipse(x, y, 40, 20, 0, 0, 2 * Math.PI);
+                    ctx.ellipse(x + 30, y + 10, 50, 30, 0, 0, 2 * Math.PI);
+                    ctx.ellipse(x - 20, y + 15, 40, 20, 0, 0, 2 * Math.PI); ctx.fill();
+                }
+            };
+            const drawBuildings = function(ctx, color, y, minH, maxH) {
+                ctx.fillStyle = color;
+                for (let i = 0; i < 20; i++) {
+                    let x = (this.offset + i * 150) % (canvas.width + 300) - 300;
+                    let buildingH = minH + (Math.sin(i) * 0.5 + 0.5) * (maxH - minH);
+                    ctx.fillRect(x, y - buildingH, 100, buildingH);
+                }
+            };
+            const drawCacti = function(ctx, color) {
+                ctx.fillStyle = color;
+                for (let i = 0; i < 10; i++) {
+                    let x = (this.offset + i * (canvas.width / 3)) % (canvas.width + 200) - 200; let y = canvas.height - groundHeight - 50;
+                    ctx.fillRect(x, y, 10, 50); ctx.fillRect(x - 10, y + 10, 10, 20); ctx.fillRect(x + 10, y + 15, 10, 20);
+                }
+            };
+            const drawEndPillars = function(ctx, color) {
+                ctx.fillStyle = color;
+                for (let i = 0; i < 5; i++) {
+                    let x = (this.offset + i * (canvas.width / 2)) % (canvas.width + 200) - 200; let y = canvas.height - groundHeight - 200;
+                    ctx.fillRect(x, y, 40, 200);
+                }
+            };
+            const drawMushrooms = function(ctx, colorCap, colorStalk) {
+                for (let i = 0; i < 10; i++) {
+                    let x = (this.offset + i * (canvas.width / 3)) % (canvas.width + 200) - 200; let y = canvas.height - groundHeight - 40;
+                    ctx.fillStyle = colorStalk; ctx.fillRect(x + 10, y, 20, 40);
+                    ctx.fillStyle = colorCap; ctx.beginPath();
+                    ctx.ellipse(x + 20, y, 30, 20, 0, Math.PI, 2 * Math.PI); ctx.fill();
+                }
+            };
+            const drawCoral = function(ctx, color) {
+                ctx.fillStyle = color;
+                for (let i = 0; i < 15; i++) {
+                    let x = (this.offset + i * (canvas.width / 5)) % (canvas.width + 200) - 200; let y = canvas.height - groundHeight - 60;
+                    ctx.fillRect(x, y, 5, 60); ctx.fillRect(x - 10, y + 20, 25, 5);
+                }
+            };
+            const drawPetals = function(ctx, color) {
+                ctx.fillStyle = color;
+                for (let i = 0; i < 20; i++) {
+                    let x = (this.offset * 1.5 + i * 100) % canvas.width; let y = (this.offset + i * 50) % canvas.height;
+                    ctx.fillRect(x, y, 3, 3);
+                }
+            };
+            const drawLavaFlows = function(ctx, color) {
+                ctx.fillStyle = color;
+                for (let i = 0; i < 3; i++) {
+                    let x = (this.offset * 0.5 + i * (canvas.width / 2)) % (canvas.width + 200) - 200;
+                    ctx.beginPath(); ctx.moveTo(x, canvas.height - groundHeight); ctx.lineTo(x + 20, canvas.height - groundHeight - 50);
+                    ctx.lineTo(x + 40, canvas.height - groundHeight); ctx.fill();
+                }
+            };
+            const drawSnow = function(ctx, color) {
+                ctx.fillStyle = color;
+                for (let i = 0; i < 30; i++) {
+                    let x = (this.offset * 1.2 + i * 70) % canvas.width; let y = (this.offset + i * 30) % canvas.height;
+                    ctx.fillRect(x, y, 2, 2);
+                }
+            };
+            const drawStars = function(ctx, color) {
+                ctx.fillStyle = color;
+                for (let i = 0; i < 50; i++) {
+                    let x = (this.offset * 0.1 + i * 130) % canvas.width; let y = (i * 90) % canvas.height;
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            };
+            const draw8BitBricks = function(ctx, color) {
+                ctx.fillStyle = color;
+                for (let i = 0; i < 10; i++) {
+                    let x = (this.offset + i * (canvas.width / 3)) % (canvas.width + 200) - 200;
+                    ctx.fillRect(x, canvas.height - groundHeight - 80, 40, 40); ctx.fillRect(x + 60, canvas.height - groundHeight - 120, 40, 40);
+                }
+            };
+
+            const backgroundManager = {
+                layers: [],
+                
+                init(theme) {
+                    this.layers = [];
+                    const w = canvas.width;
+                    const h = canvas.height;
+                    const gh = groundHeight;
+                    
+                    switch (theme) {
+                        case 'overworld':
+                            this.layers.push({ speed: 0.1, offset: 0, draw: function(ctx) { drawHills.call(this, ctx, '#116611', h - gh - 50, 50); } });
+                            this.layers.push({ speed: 0.2, offset: 0, draw: function(ctx) { drawHills.call(this, ctx, '#228B22', h - gh - 20, 30); } });
+                            this.layers.push({ speed: 0.3, offset: 0, draw: function(ctx) { drawClouds.call(this, ctx, 'rgba(255,255,255,0.8)'); } });
+                            break;
+                        case 'nether':
+                            this.layers.push({ speed: 0.1, offset: 0, draw: function(ctx) { drawHills.call(this, ctx, '#3b0000', h - gh - 80, 20); } });
+                            this.layers.push({ speed: 0.2, offset: 0, draw: function(ctx) { drawHills.call(this, ctx, '#4a0101', h - gh - 40, 40); } });
+                            break;
+                        case 'new_york':
+                            this.layers.push({ speed: 0.1, offset: 0, draw: function(ctx) { drawBuildings.call(this, ctx, '#1A242F', h - gh, 50, 150); } });
+                            this.layers.push({ speed: 0.2, offset: 0, draw: function(ctx) { drawBuildings.call(this, ctx, '#2C3E50', h - gh, 20, 100); } });
+                            break;
+                        case 'los_angeles':
+                            this.layers.push({ speed: 0, offset: 0, draw: (ctx) => { ctx.fillStyle = '#FF4500'; ctx.fillRect(w - 150, 70, 60, 60); }}); // Sun
+                            this.layers.push({ speed: 0.1, offset: 0, draw: function(ctx) { drawHills.call(this, ctx, '#DAA06D', h - gh - 50, 80); } });
+                            this.layers.push({ speed: 0.2, offset: 0, draw: function(ctx) { drawHills.call(this, ctx, '#D2B48C', h - gh - 20, 50); } });
+                            break;
+                        case 'desert':
+                            this.layers.push({ speed: 0.1, offset: 0, draw: function(ctx) { drawHills.call(this, ctx, '#E5C100', h - gh - 50, 10); } }); // Mesas
+                            this.layers.push({ speed: 0.2, offset: 0, draw: function(ctx) { drawCacti.call(this, ctx, '#006400'); } });
+                            break;
+                        case 'the_end':
+                            this.layers.push({ speed: 0.1, offset: 0, draw: function(ctx) { drawEndPillars.call(this, ctx, '#2E2E2E'); } });
+                            this.layers.push({ speed: 0.2, offset: 0, draw: function(ctx) { drawEndPillars.call(this, ctx, '#3E3E3E'); } });
+                            break;
+                        case 'mushroom':
+                            this.layers.push({ speed: 0.1, offset: 0, draw: function(ctx) { drawMushrooms.call(this, ctx, '#E74C3C', '#FADBD8'); } });
+                            this.layers.push({ speed: 0.2, offset: 0, draw: function(ctx) { drawMushrooms.call(this, ctx, '#9B59B6', '#EBDEF0'); } });
+                            break;
+                        case 'coral_reef':
+                            this.layers.push({ speed: 0.1, offset: 0, draw: function(ctx) { drawCoral.call(this, ctx, '#E74C3C'); } }); // Red coral
+                            this.layers.push({ speed: 0.2, offset: 0, draw: function(ctx) { drawCoral.call(this, ctx, '#F1C40F'); } }); // Yellow coral
+                            this.layers.push({ speed: 0.3, offset: 0, draw: function(ctx) { drawCoral.call(this, ctx, '#3498DB'); } }); // Blue coral
+                            break;
+                        case 'cherry_blossom':
+                            this.layers.push({ speed: 0.1, offset: 0, draw: function(ctx) { drawHills.call(this, ctx, '#FFB6C1', h - gh - 50, 40); } });
+                            this.layers.push({ speed: 0.2, offset: 0, draw: function(ctx) { drawHills.call(this, ctx, '#FFC0CB', h - gh - 20, 30); } });
+                            this.layers.push({ speed: 0.3, offset: 0, draw: function(ctx) { drawPetals.call(this, ctx, 'rgba(255, 255, 255, 0.7)'); } });
+                            break;
+                        case 'volcano':
+                            this.layers.push({ speed: 0, offset: 0, draw: (ctx) => {
+                                ctx.fillStyle = '#2E2E2E'; ctx.beginPath(); ctx.moveTo(w / 2 - 150, h - gh);
+                                ctx.lineTo(w / 2, h - gh - 200); ctx.lineTo(w / 2 + 150, h - gh); ctx.closePath(); ctx.fill();
+                                ctx.fillStyle = '#FF4500'; ctx.fillRect(w / 2 - 20, h - gh - 200, 40, 10);
+                            }});
+                            this.layers.push({ speed: 0.1, offset: 0, draw: function(ctx) { drawLavaFlows.call(this, ctx, '#FF4500'); } });
+                            break;
+                        case 'snowy_forest':
+                            this.layers.push({ speed: 0.1, offset: 0, draw: function(ctx) { drawHills.call(this, ctx, '#B0C4DE', h - gh - 50, 40); } });
+                            this.layers.push({ speed: 0.2, offset: 0, draw: function(ctx) { drawHills.call(this, ctx, '#E6E6FA', h - gh - 20, 30); } });
+                            this.layers.push({ speed: 0.3, offset: 0, draw: function(ctx) { drawSnow.call(this, ctx, 'rgba(255, 255, 255, 0.8)'); } });
+                            break;
+                        case 'space_station':
+                            this.layers.push({ speed: 0.1, offset: 0, draw: function(ctx) { drawStars.call(this, ctx, 'white'); } });
+                            this.layers.push({ speed: 0.2, offset: 0, draw: function(ctx) {
+                                ctx.fillStyle = '#4C4C4C';
+                                for (let i = 0; i < 10; i++) {
+                                    let x = (this.offset + i * (w/3)) % (w + 200) - 200;
+                                    ctx.fillRect(x, h - gh - 100, 20, 100); ctx.fillRect(x - 20, h - gh - 100, 60, 20);
+                                }
+                            }});
+                            break;
+                        case 'classic_8bit':
+                            this.layers.push({ speed: 0.1, offset: 0, draw: function(ctx) { drawClouds.call(this, ctx, 'rgba(255,255,255,1)'); } });
+                            this.layers.push({ speed: 0.2, offset: 0, draw: function(ctx) { draw8BitBricks.call(this, ctx, '#C04000'); } });
+                            break;
+                    }
+                },
+                
+                update() {
+                    for (let layer of this.layers) {
+                        layer.offset += gameSpeed * layer.speed;
+                    }
+                },
+                
+                draw(ctx) {
+                    for (let layer of this.layers) {
+                        ctx.save();
+                        layer.draw(ctx);
+                        ctx.restore();
+                    }
+                }
+            };
+            
+
+            // --- Game Logic ---
+            
+            function resetGame() {
+                player.init();
+                pipes.init();
+                
+                score = 0;
+                coins = 0;
+                currentLevel = 1;
+                gameSpeed = 3;
+                pipeGap = 150;
+                frame = 0;
+                
+                // Set theme and colors
+                colors = themes[settings.theme] || themes.overworld;
+                document.body.style.backgroundColor = colors.sky;
+                canvas.style.backgroundColor = colors.sky;
+                
+                // Init background
+                backgroundManager.init(settings.theme);
+            }
+
+            function startGame() {
+                initAudio(); // Initialize audio on game start
+                resetGame();
+                state = 'playing';
+                mainMenu.classList.add('hidden');
+                gameOverMenu.classList.add('hidden');
+                settingsMenu.classList.add('hidden');
+            }
+
+            function endGame() {
+                if (state !== 'playing') return; // Prevent multiple calls
+                
+                state = 'game-over';
+                playDieSound();
+                
+                // Save scores
+                if (score > settings.highScore) {
+                    settings.highScore = score;
+                    newHighScoreText.classList.remove('hidden');
+                } else {
+                    newHighScoreText.classList.add('hidden');
+                }
+                
+                settings.totalCoins += coins;
+                saveGame();
+                
+                // Update UI
+                gameOverScore.textContent = `Score: ${score}`;
+                gameOverCoins.textContent = `Coins: ${coins}`;
+                gameOverMenu.classList.remove('hidden');
+                
+                // Reset taunt button
+                tauntButton.classList.remove('hidden');
+                tauntText.innerHTML = '<div class="spinner"></div>';
+            }
+
+            function updateDifficulty() {
+                // Every 5 points, increase difficulty
+                if (score > 0 && score % 5 === 0) {
+                    currentLevel++;
+                    gameSpeed += 0.2;
+                    pipeGap = Math.max(100, pipeGap - 5); // Minimum gap of 100
+                }
+            }
+
+            function drawGround(ctx) {
+                // Ground base
+                ctx.fillStyle = colors.ground;
+                ctx.fillRect(0, canvas.height - groundHeight, canvas.width, groundHeight);
+                
+                // Grass top
+                ctx.fillStyle = colors.grass;
+                ctx.fillRect(0, canvas.height - groundHeight, canvas.width, 20);
+                
+                // Pixelated details
+                ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                for(let i = 0; i < canvas.width; i += 4) {
+                    for (let j = canvas.height - groundHeight + 20; j < canvas.height; j += 4) {
+                        if (Math.random() > 0.5) {
+                            ctx.fillRect(i, j, 2, 2);
+                        }
+                    }
+                }
+            }
+
+            function drawScore(ctx) {
+                ctx.fillStyle = 'white';
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 4;
+                ctx.font = '24px "Press Start 2P"';
+                ctx.textAlign = 'center';
+                
+                const scoreStr = `${score}`;
+                ctx.strokeText(scoreStr, canvas.width / 2, 50);
+                ctx.fillText(scoreStr, canvas.width / 2, 50);
+                
+                const levelStr = `Level ${currentLevel}`;
+                ctx.font = '14px "Press Start 2P"';
+                ctx.strokeText(levelStr, canvas.width / 2, 80);
+                ctx.fillText(levelStr, canvas.width / 2, 80);
+                
+                // Coin score
+                const coinStr = `${coins}`;
+                ctx.font = '20px "Press Start 2P"';
+                ctx.fillStyle = '#FFFF00';
+                ctx.strokeStyle = '#E6A200';
+                ctx.textAlign = 'left';
+                
+                // Draw coin icon
+                ctx.beginPath();
+                ctx.arc(25, 40, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.strokeText(coinStr, 45, 50);
+                ctx.fillText(coinStr, 45, 50);
+            }
+            
+            function drawMainMenu() {
+                // Draw a static "preview" of the game
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                colors = themes[settings.theme] || themes.overworld;
+                backgroundManager.draw(ctx); // Draw parallax background
+                drawGround(ctx);
+                
+                // Draw the selected character
+                ctx.save();
+                ctx.translate(60, 150);
+                const charDrawFn = characters[settings.selectedCharacter]?.draw || drawSteve;
+                charDrawFn(ctx, 0, 0);
+                ctx.restore();
+            }
+
+            // --- Game Loop ---
+            function gameLoop() {
+                if (state === 'playing') {
+                    // Update
+                    player.update();
+                    pipes.update();
+                    backgroundManager.update();
+                    frame++;
+
+                    // Draw
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    backgroundManager.draw(ctx);
+                    pipes.draw(ctx);
+                    drawGround(ctx);
+                    player.draw(ctx);
+                    drawScore(ctx);
+                    
+                } else if (state === 'main-menu') {
+                    // Redraw main menu static scene
+                    drawMainMenu();
+                }
+
+                requestAnimationFrame(gameLoop);
+            }
+
+            // --- Event Listeners ---
+            function handleInput(e) {
+                if (e.type === 'keydown' && e.code !== 'Space' && e.code !== 'ArrowUp') return;
+                
+                // Try to init audio on first input
+                initAudio();
+
+                if (state === 'playing') {
+                    player.flap();
+                }
+            }
+
+            canvas.addEventListener('mousedown', handleInput);
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault(); // Prevent scrolling
+                handleInput(e);
+            }, { passive: false });
+            window.addEventListener('keydown', handleInput);
+
+            startButton.addEventListener('click', () => {
+                startGame();
+            });
+            
+            restartButton.addEventListener('click', () => {
+                startGame();
+            });
+
+            mainMenuButton.addEventListener('click', () => {
+                state = 'main-menu';
+                gameOverMenu.classList.add('hidden');
+                mainMenu.classList.remove('hidden');
+                mainMenuHighScore.textContent = `High Score: ${settings.highScore}`;
+            });
+            
+            settingsButton.addEventListener('click', () => {
+                mainMenu.classList.add('hidden');
+                settingsMenu.classList.remove('hidden');
+                updateSettingsUI();
+            });
+            
+            settingsBackButton.addEventListener('click', () => {
+                settingsMenu.classList.add('hidden');
+                mainMenu.classList.remove('hidden');
+                mainMenuHighScore.textContent = `High Score: ${settings.highScore}`;
+                // Redraw main menu with potentially new theme
+                backgroundManager.init(settings.theme);
+                drawMainMenu();
+            });
+            
+            shopButton.addEventListener('click', () => {
+                settingsMenu.classList.add('hidden');
+                shopMenu.classList.remove('hidden');
+                updateShopUI();
+            });
+            
+            shopBackButton.addEventListener('click', () => {
+                shopMenu.classList.add('hidden');
+                settingsMenu.classList.remove('hidden');
+                updateSettingsUI(); // Refresh settings menu
+            });
+            
+            function setFlapStrength(strengthName) {
+                if (strengthName === 'Weak') {
+                    settings.flapStrength = 3.0;
+                    settings.flapStrengthName = 'Weak';
+                } else if (strengthName === 'Strong') {
+                    settings.flapStrength = 4.0;
+                    settings.flapStrengthName = 'Strong';
+                } else {
+                    settings.flapStrength = 3.5;
+                    settings.flapStrengthName = 'Normal';
+                }
+                saveGame();
+                updateSettingsUI();
+            }
+
+            flapStrengthToggle.addEventListener('click', () => {
+                if (settings.flapStrengthName === 'Normal') {
+                    setFlapStrength('Strong');
+                } else if (settings.flapStrengthName === 'Strong') {
+                    setFlapStrength('Weak');
+                } else {
+                    setFlapStrength('Normal');
+                }
+            });
+            
+            themeToggle.addEventListener('click', () => {
+                const themeOrder = [
+                    'overworld', 'nether', 'new_york', 'los_angeles', 'desert', 'the_end', 
+                    'mushroom', 'coral_reef', 'cherry_blossom', 'volcano', 'snowy_forest', 
+                    'space_station', 'classic_8bit'
+                ];
+                let currentThemeIndex = themeOrder.indexOf(settings.theme);
+                currentThemeIndex = (currentThemeIndex + 1) % themeOrder.length;
+                settings.theme = themeOrder[currentThemeIndex];
+                
+                saveGame();
+                updateSettingsUI();
+            });
+            
+            // --- Gemini Taunt Feature ---
+            tauntButton.addEventListener('click', () => {
+                tauntModal.classList.remove('hidden');
+                tauntButton.classList.add('hidden');
+                getTaunt();
+            });
+            
+            closeTauntButton.addEventListener('click', () => {
+                tauntModal.classList.add('hidden');
+            });
+            
+            async function getTaunt() {
+                tauntText.innerHTML = '<div class="spinner"></div>'; // Show spinner
+                
+                const userQuery = `My score was ${score}, my level was ${currentLevel}, and I earned ${coins} coins.`;
+                
+                // This is the prompt for the AI
+                const systemPrompt = `You are a comically evil, Minecraft-style villain (like a Wither or the Ender Dragon). 
+                A player just lost your "Blocky Bird" game. 
+                Look at their score and give them a short, funny, and pixelated-themed "taunt" or "roast." 
+                Keep it to one or two short sentences. Be creative and a little mean, but in a fun, blocky way.
+                Examples: "Only ${score}? My skeletons could do better!", "You fall like a gravel block, player. Try again!", "Pathetic. Even a pig could fly better than that."`;
+
+                const apiKey = ""; // API key is handled by the environment
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    systemInstruction: {
+                        parts: [{ text: systemPrompt }]
+                    },
+                };
+
+                try {
+                    // Exponential backoff retry logic
+                    let response;
+                    let retries = 0;
+                    const maxRetries = 3;
+                    let delay = 1000;
+
+                    while (retries < maxRetries) {
+                        response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (response.ok) {
+                            break; // Success
+                        }
+
+                        if (response.status === 429 || response.status >= 500) {
+                            // Retry on rate limiting or server errors
+                            retries++;
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            delay *= 2;
+                        } else {
+                            // Don't retry on other client-side errors
+                            throw new Error(`API request failed with status ${response.status}`);
+                        }
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(`API request failed after ${maxRetries} retries.`);
+                    }
+
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                    if (text) {
+                        tauntText.textContent = text;
+                    } else {
+                        throw new Error("Invalid response structure from API.");
+                    }
+
+                } catch (error) {
+                    console.error("Error getting taunt:", error);
+                    tauntText.textContent = "Hah! My taunt is so good, it broke the game! Try again, block-head.";
+                }
+            }
+
+
+            // --- Initialization ---
+            window.addEventListener('resize', resizeCanvas);
+            loadGame();
+            resizeCanvas(); // Initial resize
+            gameLoop(); // Start the loop
+        });
+    </script>
+</body>
+</html>
